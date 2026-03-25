@@ -1,0 +1,30 @@
+# Estado persistido pelo bot — não commitar manualmente
+# (o GitHub Actions faz o commit automaticamente via workflow)
+estado_precos.json
+
+# Variáveis de ambiente locais — NUNCA commitar
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Logs locais
+*.log
