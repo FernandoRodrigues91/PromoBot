@@ -38,3 +38,15 @@ JOGOS_STEAM = {
     "Borderlands 4":                   "1285190",
 }
 DESCONTO_MINIMO_STEAM = 10
+
+# --- Green Man Gaming ---
+JOGOS_GMG = {
+    "Borderlands 4": "https://www.greenmangaming.com/games/borderlands-4-pc/",
+}
+DESCONTO_MINIMO_GMG = 60
+
+# --- Instant Gaming ---
+JOGOS_IG = {
+    "Borderlands 4": "https://www.instant-gaming.com/pt/19682-comprar-borderlands-4-pc-steam/",
+}
+DESCONTO_MINIMO_IG = 60
