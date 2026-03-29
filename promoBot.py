@@ -151,3 +151,30 @@ def buscar_preco_steam(app_id: str) -> dict | None:
         "moeda":          price["currency"],
         "simbolo":        "R$",
     }
+
+
+# ------------------------------------------------------------
+# Green Man Gaming
+# ------------------------------------------------------------
+
+def buscar_preco_gmg(url: str) -> dict | None:
+    resp = requisicao_com_retry(url, headers=HEADERS_BASE, cookies=GMG_COOKIES)
+    if resp is None:
+        return None
+
+    html = resp.text
+
+    # Estratégia 1: JSON-LD
+    preco_atual, preco_orig, desconto = _extrair_jsonld(html)
+    if preco_atual is not None:
+        if preco_orig and preco_orig > preco_atual:
+            desconto = round((1 - preco_atual / preco_orig) * 100)
+        moeda, simbolo = _detectar_moeda(html)  # FIX: usa helper unificado
+        log.debug("[GMG] JSON-LD: orig=%s atual=%s desconto=%s%%", preco_orig, preco_atual, desconto)
+        return {
+            "preco_original": preco_orig or preco_atual,
+            "preco_atual":    preco_atual,
+            "desconto":       desconto,
+            "moeda":          moeda,
+            "simbolo":        simbolo,
+        }
