@@ -178,3 +178,29 @@ def buscar_preco_gmg(url: str) -> dict | None:
             "moeda":          moeda,
             "simbolo":        simbolo,
         }
+        
+        # Estratégia 2: Tags <gmgPrice>
+    precos = re.findall(r'<gmgPrice[^>]*>\s*\$?\s*([\d.,]+)\s*</gmgPrice>', html)
+    log.debug("[GMG] gmgPrice tags: %s", precos)
+
+    if len(precos) >= 2:
+        preco_orig  = _parse_float_br(precos[0])  # FIX: parsing correto BR/US
+        preco_atual = _parse_float_br(precos[1])
+        desconto    = round((1 - preco_atual / preco_orig) * 100) if preco_orig > 0 else 0
+    elif len(precos) == 1:
+        preco_atual = _parse_float_br(precos[0])  # FIX: parsing correto BR/US
+        preco_orig  = preco_atual
+        desconto    = 0
+    else:
+        log.error("[GMG] Nenhuma estratégia funcionou.")
+        return None
+
+    moeda, simbolo = _detectar_moeda(html)  # FIX: usa helper unificado
+    log.debug("[GMG] orig=%s atual=%s desconto=%s%%", preco_orig, preco_atual, desconto)
+    return {
+        "preco_original": preco_orig,
+        "preco_atual":    preco_atual,
+        "desconto":       desconto,
+        "moeda":          moeda,
+        "simbolo":        simbolo,
+    }
