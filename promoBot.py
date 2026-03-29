@@ -123,3 +123,31 @@ def requisicao_com_retry(url: str, method: str = "get", **kwargs) -> requests.Re
     log.error("[ERRO] Todas as tentativas falharam para: %s", url)
     return None
 
+# ------------------------------------------------------------
+# Steam
+# ------------------------------------------------------------
+
+def buscar_preco_steam(app_id: str) -> dict | None:
+    url  = "https://store.steampowered.com/api/appdetails"
+    resp = requisicao_com_retry(url, params={"appids": app_id, "cc": "br", "l": "portuguese"})
+    if resp is None:
+        return None
+
+    data = resp.json()
+    jogo = data.get(app_id, {})
+    if not jogo.get("success"):
+        log.warning("[AVISO] App ID %s não encontrado.", app_id)
+        return None
+
+    price = jogo["data"].get("price_overview")
+    if not price:
+        log.info("[INFO] App ID %s sem dados de preço.", app_id)
+        return None
+
+    return {
+        "preco_original": price["initial"] / 100,
+        "preco_atual":    price["final"] / 100,
+        "desconto":       price["discount_percent"],
+        "moeda":          price["currency"],
+        "simbolo":        "R$",
+    }
