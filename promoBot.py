@@ -204,3 +204,36 @@ def buscar_preco_gmg(url: str) -> dict | None:
         "moeda":          moeda,
         "simbolo":        simbolo,
     }
+    
+    # ------------------------------------------------------------
+# Instant Gaming
+# ------------------------------------------------------------
+
+def buscar_preco_ig(url: str) -> dict | None:
+    resp = requisicao_com_retry(url, headers=HEADERS_BASE)
+    if resp is None:
+        return None
+
+    html = resp.text
+
+    # Estratégia 1: JSON-LD
+    preco_atual, preco_orig, desconto = _extrair_jsonld(html)
+    if preco_atual is not None:
+        moeda, simbolo = _detectar_moeda(html)
+
+        # FIX: busca o original ANTES de calcular o desconto
+        if preco_orig is None or preco_orig == preco_atual:
+            preco_orig = _extrair_preco_original_ig(html, preco_atual)
+
+        # FIX: calcula o desconto com preco_orig já resolvido
+        if desconto == 0 and preco_orig and preco_orig > preco_atual:
+            desconto = round((1 - preco_atual / preco_orig) * 100)
+
+        log.debug("[IG] JSON-LD: orig=%s atual=%s desconto=%s%%", preco_orig, preco_atual, desconto)
+        return {
+            "preco_original": preco_orig or preco_atual,
+            "preco_atual":    preco_atual,
+            "desconto":       desconto,
+            "moeda":          moeda,
+            "simbolo":        simbolo,
+        }
