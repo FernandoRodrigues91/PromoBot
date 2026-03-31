@@ -265,3 +265,61 @@ def buscar_preco_ig(url: str) -> dict | None:
 
     log.error("[IG] Nenhuma estratégia funcionou.")
     return None
+
+def _extrair_jsonld(html: str) -> tuple[float | None, float | None, int]:
+    """Extrai preço atual, original e desconto de blocos JSON-LD."""
+    blocos = re.findall(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        html, re.DOTALL | re.IGNORECASE
+    )
+    for bloco in blocos:
+        try:
+            data  = json.loads(bloco)
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                offers = item.get("offers", {})
+                if isinstance(offers, list):
+                    offers = offers[0] if offers else {}
+                price = offers.get("price") or item.get("price")
+                if price is not None:
+                    atual = float(str(price).replace(",", "."))
+
+                    # FIX: removido fallback para "priceValidUntil", que é uma
+                    # data (ex: "2025-12-31"), não um preço — causava ValueError.
+                    original = offers.get("highPrice")
+                    try:
+                        original = float(str(original).replace(",", ".")) if original else None
+                    except ValueError:
+                        original = None
+
+                    return atual, original, 0
+        except (json.JSONDecodeError, ValueError):
+            continue
+    return None, None, 0
+
+
+def _extrair_preco_original_ig(html: str, preco_atual: float) -> float | None:
+    """Tenta extrair o preço original riscado da página da IG."""
+    m = re.search(
+        r'class=["\'](?:old.?price|original.?price|strike)["\'][^>]*>.*?([\d]+[.,][\d]{2})',
+        html
+    )
+    if m:
+        try:
+            return _parse_float_br(m.group(1))  # FIX: parsing correto BR/US
+        except ValueError:
+            pass
+    return None
+
+
+def _detectar_moeda(html: str) -> tuple[str, str]:
+    """Detecta a moeda predominante no HTML."""
+    m = re.search(r'["\']currency["\']\s*:\s*["\']([A-Z]{3})["\']', html[:8000])
+    if m:
+        cur = m.group(1)
+        return cur, {"BRL": "R$", "USD": "$", "EUR": "€"}.get(cur, cur)
+    if "R$" in html[:50000]:
+        return "BRL", "R$"
+    if "€" in html[:50000]:
+        return "EUR", "€"
+    return "USD", "$"
