@@ -237,3 +237,31 @@ def buscar_preco_ig(url: str) -> dict | None:
             "moeda":          moeda,
             "simbolo":        simbolo,
         }
+        
+        # Estratégia 2: HTML estruturado — par (desconto%, preço)
+    pares = re.findall(
+        r'class=["\']discounted["\'][^>]*>\s*-(\d+)%.*?'
+        r'class=["\']total["\'][^>]*>\s*(?:R\$|€|\$|£)?\s*([\d]+[.,][\d]{2})',
+        html, re.DOTALL
+    )
+    log.debug("[IG] Pares HTML: %s", pares[:5])
+
+    if pares:
+        # Pega o maior desconto (mais provável ser o produto principal)
+        pares_num = [(int(d), _parse_float_br(p)) for d, p in pares]  # FIX: parsing correto
+        pares_num.sort(key=lambda x: -x[0])
+        desconto, preco_atual = pares_num[0]
+        preco_orig = round(preco_atual / (1 - desconto / 100), 2) if desconto < 100 else preco_atual
+
+        moeda, simbolo = _detectar_moeda(html)
+        log.debug("[IG] Par selecionado: desconto=%s%% atual=%s orig=%s", desconto, preco_atual, preco_orig)
+        return {
+            "preco_original": preco_orig,
+            "preco_atual":    preco_atual,
+            "desconto":       desconto,
+            "moeda":          moeda,
+            "simbolo":        simbolo,
+        }
+
+    log.error("[IG] Nenhuma estratégia funcionou.")
+    return None
