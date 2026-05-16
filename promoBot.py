@@ -453,3 +453,19 @@ def verificar_jogos():
 
     salvar_estado(novo_estado)
     log.info("\n  ✔️  Verificação concluída.\n")
+
+# ------------------------------------------------------------
+
+if __name__ == "__main__":
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        log.error("⚠️  TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID não definidos!")
+        sys.exit(1)  # FIX: sys.exit em vez de exit (correto para scripts)
+
+    if "--teste" in sys.argv:
+        # FIX: modo teste agora realmente valida o envio via Telegram
+        log.info("🧪 Modo teste: enviando mensagem de validação...")
+        ok = enviar_telegram("✅ <b>Bot funcionando corretamente!</b>\nConexão com Telegram validada.")
+        log.info("Mensagem de teste %s.", "enviada com sucesso" if ok else "FALHOU")
+        sys.exit(0 if ok else 1)
+    else:
+        verificar_jogos()
