@@ -323,3 +323,84 @@ def _detectar_moeda(html: str) -> tuple[str, str]:
     if "€" in html[:50000]:
         return "EUR", "€"
     return "USD", "$"
+
+# ------------------------------------------------------------
+# Telegram
+# ------------------------------------------------------------
+
+def enviar_telegram(mensagem: str) -> bool:
+    url  = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    resp = requisicao_com_retry(
+        url, method="post",
+        json={"chat_id": TELEGRAM_CHAT_ID, "text": mensagem, "parse_mode": "HTML"}
+    )
+    return resp is not None
+
+
+# ------------------------------------------------------------
+# Estado
+# ------------------------------------------------------------
+
+def carregar_estado() -> dict:
+    if os.path.exists(ARQUIVO_ESTADO):
+        try:
+            with open(ARQUIVO_ESTADO, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            log.warning("[AVISO] Erro ao carregar estado: %s. Iniciando do zero.", e)
+    return {}
+
+
+def salvar_estado(estado: dict):
+    with open(ARQUIVO_ESTADO, "w", encoding="utf-8") as f:
+        json.dump(estado, f, ensure_ascii=False, indent=2)
+
+
+# ------------------------------------------------------------
+# Lógica de notificação (unificada)
+# ------------------------------------------------------------
+
+def _processar_preco(nome: str, url_compra: str, plataforma: str, chave: str,
+                     preco: dict | None, estado: dict, novo_estado: dict,
+                     desconto_minimo: int, agora: str):
+    """Lógica centralizada de comparação e notificação para qualquer plataforma."""
+    if preco is None:
+        novo_estado[chave] = estado.get(chave, {})
+        return
+
+    desconto_atual    = preco["desconto"]
+    desconto_anterior = estado.get(chave, {}).get("desconto", 0)
+    s                 = preco["simbolo"]
+
+    novo_estado[chave] = {
+        "nome":     nome,
+        "desconto": desconto_atual,
+        "preco":    preco["preco_atual"],
+    }
+
+    if desconto_atual >= desconto_minimo and desconto_atual > desconto_anterior:
+        mensagem = (
+            f"🔥 <b>PROMOÇÃO DETECTADA!</b>\n\n"
+            f"🎮 <b>{nome}</b>\n"
+            f"🏪 Plataforma: <b>{plataforma}</b>\n"
+            f"💸 De <s>{s} {preco['preco_original']:.2f}</s> "
+            f"por <b>{s} {preco['preco_atual']:.2f}</b>\n"
+            f"🏷️ Desconto: <b>{desconto_atual}% OFF</b>\n"
+            f"🛒 <a href='{url_compra}'>Comprar agora</a>\n\n"
+            f"⏰ Detectado em: {agora}"
+        )
+        log.info("✅ Promoção! %d%% OFF — enviando alerta para %s...", desconto_atual, nome)
+        enviar_telegram(mensagem)
+
+    elif desconto_atual == 0 and desconto_anterior > 0:
+        mensagem = (
+            f"⏰ <b>Promoção encerrada</b>\n\n"
+            f"🎮 <b>{nome}</b> ({plataforma}) voltou ao preço normal.\n"
+            f"💰 Preço atual: <b>{s} {preco['preco_atual']:.2f}</b>"
+        )
+        log.info("ℹ️  Promoção encerrada para %s.", nome)
+        enviar_telegram(mensagem)
+
+    else:
+        status = f"{desconto_atual}% OFF" if desconto_atual > 0 else "sem desconto"
+        log.info("ℹ️  %s: %s (%s %.2f)", nome, status, s, preco["preco_atual"])
