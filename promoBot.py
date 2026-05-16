@@ -404,3 +404,52 @@ def _processar_preco(nome: str, url_compra: str, plataforma: str, chave: str,
     else:
         status = f"{desconto_atual}% OFF" if desconto_atual > 0 else "sem desconto"
         log.info("ℹ️  %s: %s (%s %.2f)", nome, status, s, preco["preco_atual"])
+
+# ------------------------------------------------------------
+# Verificações
+# ------------------------------------------------------------
+
+def verificar_steam(estado, novo_estado, agora):
+    log.info("\n  🟦 Steam")
+    for nome, app_id in JOGOS_STEAM.items():
+        log.info("    🔍 %s (AppID: %s)", nome, app_id)
+        preco = buscar_preco_steam(app_id)
+        chave = _chave_estado("steam", app_id)  # FIX: helper unificado
+        link  = f"https://store.steampowered.com/app/{app_id}/"
+        _processar_preco(nome, link, "Steam", chave, preco,
+                         estado, novo_estado, DESCONTO_MINIMO_STEAM, agora)
+
+
+def verificar_gmg(estado, novo_estado, agora):
+    log.info("\n  🟩 Green Man Gaming")
+    for nome, url in JOGOS_GMG.items():
+        log.info("    🔍 %s", nome)
+        preco = buscar_preco_gmg(url)
+        chave = _chave_estado("gmg", nome)  # FIX: helper unificado
+        _processar_preco(nome, url, "Green Man Gaming (DRM: Steam)", chave, preco,
+                         estado, novo_estado, DESCONTO_MINIMO_GMG, agora)
+
+
+def verificar_ig(estado, novo_estado, agora):
+    log.info("\n  🟧 Instant Gaming")
+    for nome, url in JOGOS_IG.items():
+        log.info("    🔍 %s", nome)
+        preco = buscar_preco_ig(url)
+        chave = _chave_estado("ig", nome)  # FIX: helper unificado
+        _processar_preco(nome, url, "Instant Gaming (DRM: Steam)", chave, preco,
+                         estado, novo_estado, DESCONTO_MINIMO_IG, agora)
+
+
+def verificar_jogos():
+    agora = datetime.now(BRASILIA).strftime("%d/%m/%Y %H:%M (Brasília)")
+    log.info("[%s] Iniciando verificação de preços...", agora)
+
+    estado      = carregar_estado()
+    novo_estado = {}
+
+    verificar_steam(estado, novo_estado, agora)
+    verificar_gmg(estado, novo_estado, agora)
+    verificar_ig(estado, novo_estado, agora)
+
+    salvar_estado(novo_estado)
+    log.info("\n  ✔️  Verificação concluída.\n")
