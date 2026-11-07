@@ -36,6 +36,8 @@ JOGOS_STEAM = {
     "ARK: Astraeos":                   "3483400",
     "ARK: Lost Colony Expansion Pass": "3720100",
     "Borderlands 4":                   "1285190",
+    "Ark Dragontopia":                 "4558490",
+    "Ark FantasticTames":              "4558510",
 }
 DESCONTO_MINIMO_STEAM = 10
 
